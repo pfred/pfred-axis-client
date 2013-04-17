@@ -1,0 +1,210 @@
+<?xml version="1.0"?>
+<project name="PFREDAxisClient" default="package" basedir="." >
+    <!-- directory sturcture -->
+    <property file="local.ant.properties" />
+    <property file="build.properties" />
+    <property name="base.dir" value="." />
+    <property name="axis.lib.dir" value="${base.dir}/lib/axis" />
+    <property name="client.lib.dir" value="${base.dir}/lib/client" />
+    <property name="build.dir" value="${base.dir}/build" />
+    <property name="build.src.dir" value="${build.dir}/src" />
+    <property name="build.dest.dir" value="${build.dir}/dest" />
+    <property name="build.generated.dir" value="${build.dir}/generated" />
+    <property name="dist.dir" value="${base.dir}/dist" />
+    <property name="src.dir" value="${base.dir}/src" />
+    <property name="sample.dir" value="${base.dir}/sample" />
+    <property name="publish.dir" value="${base.dir}/publish" />
+    <property name="project.name" value="PFREDAxisClient" />
+    <property name="version" value="1.0" />
+    <property name="jar.file.name" value="${project.name}-${version}.jar" />
+    
+    <!-- compiler settings -->
+    <property name="compile.debug"       value="true" />
+    <property name="compile.optimize"    value="true" />
+    <property name="compile.target"      value="1.6" />
+    <property name="compile.source"      value="1.6" />
+    <property name="compile.deprecation" value="true" />
+    
+   
+    <!-- wsdl2java properties -->       
+    <property name="wsdl.file.name" value="http://camlinux122.pfizer.com:9080/PFREDService/services/PFREDService?wsdl"/>
+    <property name="service.endpoint" value="http://camlinux122.pfizer.com:9080/PFREDService/services/PFREDService"/>  
+    
+    <!-- classpath to run axis-ant for the generation of java from wsdl -->
+    <path id="build.classpath" >
+        <fileset dir="${axis.lib.dir}">
+            <include name="axis1.4.2.jar" />
+            <include name="axis-ant1.4.jar" />
+            <include name="axis-schema.jar"/>
+            <include name="wsdl4j-1.6.1.jar" />
+            <include name="jaxrpc-api.jar" />
+            <include name="jaxrpc-impl.jar" />
+            <include name="saaj-api-1.3.jar" />
+            <include name="saaj-impl-1.3.jar" />
+            <include name="commons-logging-1.0.4.jar" />
+            <include name="commons-discovery-0.2.jar" />
+        </fileset>
+    </path>
+     
+    <!-- path to the ANT dependancy jar files -->
+    <path id="ant-task-classpath">
+        <fileset dir="${axis.lib.dir}">
+            <include name="activation1.1.jar" />
+            <include name="axis-ant1.4.jar" />
+            <include name="axis1.4.2.jar" />
+            <include name="commons-logging-1.0.4.jar" />
+            <include name="commons-discovery-0.2.jar" />
+            <include name="jaxrpc-api.jar" />
+            <include name="jaxrpc-impl.jar" />
+            <include name="saaj-api-1.3.jar" />
+            <include name="saaj-impl-1.3.jar" />
+            <include name="wsdl4j-1.6.1.jar" />
+        </fileset>
+    </path>
+
+    <!-- For ant wsdl2java -->
+    <taskdef resource="axis-tasks.properties" classpathref="ant-task-classpath" />
+	
+    <!-- classpath to compile the project -->
+    <path id="compile.classpath" >
+        <fileset dir="${client.lib.dir}">
+            <include name="*.jar" />
+        </fileset>
+
+        <fileset dir="${axis.lib.dir}">
+            <include name="axis1.4.2.jar" />
+            <include name="jaxrpc-api.jar" />
+            <include name="jaxrpc-impl.jar" />
+            <include name="saaj-api-1.3.jar" />
+            <include name="saaj-impl-1.3.jar" />
+        </fileset>
+    </path>
+    
+    <!-- classpath to compile sample code -->
+    <path id="compile.sample.classpath" >
+        <fileset dir="${dist.dir}">
+            <include name="*.jar" />
+        </fileset>
+    </path>
+    
+    <!-- classpath to run sample code -->
+    <path id="run.sample.classpath" >
+        <path refid="compile.sample.classpath"/>
+        <path location="${build.dest.dir}"/>
+    </path>
+    
+    <!-- Delete all generated files by ant -->
+    <target name="clean" description="Delete all generated files by ant">
+        <delete dir="${build.dir}" />
+        <delete dir="${dist.dir}" />
+    </target>
+    
+    <!-- initialize the file system -->
+    <target name="init" description="initialize file system structure" depends="clean">
+        <mkdir dir="${build.src.dir}" />
+        <mkdir dir="${build.dest.dir}" />
+        <mkdir dir="${build.generated.dir}" />
+        <mkdir dir="${dist.dir}" />
+    </target>
+    
+   <!-- generate java client from wsdl -->
+    <target name="wsdl2java" depends="init">
+        <axis-wsdl2java output="${build.generated.dir}" verbose="true" url="${wsdl.file.name}" serverside="false" debug="false">
+        </axis-wsdl2java>
+    </target>
+    
+
+    <!-- Compiles the build source directory  -->
+    <target name="compile" depends="wsdl2java"  description="Compiles the source code">
+        <!-- copy src files -->
+        <copy todir="${build.src.dir}" >
+            <fileset dir="${src.dir}"/>
+        </copy>
+        <copy todir="${build.src.dir}" >
+            <fileset dir="${build.generated.dir}"/>
+        </copy>
+        <javac srcdir="${build.src.dir}"
+            destdir="${build.dest.dir}" 
+            debug="${compile.debug}" 
+            optimize="${compile.optimize}" 
+            target="${compile.target}" 
+            source="${compile.source}" 
+            deprecation="${compile.deprecation}">
+            <classpath refid="compile.classpath"/>
+        </javac>
+    </target>
+       
+    <!-- Creates the class package -->
+    <target name="package" depends="compile" description="Creates the class package, include xml and xsd files">
+        <copy todir="${build.dest.dir}" filtering="yes">
+            <fileset dir="${build.src.dir}">
+                <include name="**/*.xml"/>
+                <include name="**/*.xsd"/>
+                <include name="*.properties"/>
+            </fileset>
+        </copy>
+        <jar jarfile="${dist.dir}/${jar.file.name}"   basedir="${build.dest.dir}" />
+    </target>
+    
+    <!-- distribute the client jar and all dependent jars -->
+    <target name="publish" depends="package" description="distribute the client jar and all dependent jars">
+        <copy todir="${dist.dir}" filtering="yes">
+            <fileset dir="${client.lib.dir}">
+                <include name="*.jar"/>
+            </fileset>
+            <fileset dir="${axis.lib.dir}">
+                <include name="axis1.4.2.jar" />
+                <include name="commons-discovery-0.2.jar" />
+                <include name="commons-logging-1.0.4.jar" />
+                <include name="jaxrpc-api.jar" />
+                <include name="jaxrpc-impl.jar" />
+                <include name="saaj-api-1.3.jar" />
+                <include name="saaj-impl-1.3.jar" />
+                <include name="wsdl4j-1.6.1.jar" />
+            </fileset>
+        </copy>
+        <copy todir="${publish.dir}" filtering="yes">
+            <fileset dir="${dist.dir}">
+                <include name="${jar.file.name}" />
+            </fileset>
+        </copy>
+    </target>
+    
+    <!-- compile sample codes -->
+    <target name="compile-sample" depends="publish"  description="Compile sample code">
+        <!-- prepare directory -->
+        <delete dir="${build.dest.dir}" />
+        <mkdir dir="${build.dest.dir}" />
+        
+        <!-- compile sample files -->
+        <javac srcdir="${sample.dir}"
+            destdir="${build.dest.dir}" 
+            debug="${compile.debug}" 
+            optimize="${compile.optimize}" 
+            target="${compile.target}" 
+            source="${compile.source}" 
+            deprecation="${compile.deprecation}">
+            <classpath refid="compile.sample.classpath"/>
+        </javac>
+            
+        
+        <!-- copy non-java  files -->
+        <copy todir="${build.dest.dir}" >
+                       
+            <fileset dir="${sample.dir}">
+                <include name="**/*.xml"/>
+                <include name="**/*.xsd"/>
+                <include name="*.properties"/>
+            </fileset>
+        </copy>
+    </target>
+    
+    <!-- run class ClientSample -->
+    <target name="run-client-sample" depends="compile-sample"  description="run client sample">
+        <java classname="org.pfred.axis.client.sample.PFREDAxisClientSample">
+            <arg line="${service.endpoint}" />
+            <classpath refid="run.sample.classpath"/>
+        </java>
+    </target>
+    
+</project>
